@@ -1,0 +1,45 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3"><div class="dashboard-card">
+        <div class="text-muted small fw-bold mb-1">平台总用户数</div><h3 class="fw-bold m-0">{{ stats.total_users }}</h3>
+    </div></div>
+    <div class="col-md-3"><div class="dashboard-card">
+        <div class="text-muted small fw-bold mb-1">今日分析请求量</div><h3 class="fw-bold m-0 text-success">{{ stats.today_analyses }}</h3>
+    </div></div>
+    <div class="col-md-3"><div class="dashboard-card">
+        <div class="text-muted small fw-bold mb-1">累计危机干预次数</div><h3 class="fw-bold m-0 text-danger">{{ stats.total_crisis }}</h3>
+    </div></div>
+    <div class="col-md-3"><div class="dashboard-card">
+        <div class="text-muted small fw-bold mb-1">系统资源入库量</div><h3 class="fw-bold m-0 text-warning">{{ stats.total_resources }}</h3>
+    </div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5"><div class="dashboard-card">
+        <h6 class="fw-bold mb-3"><i class="fas fa-chart-pie text-primary me-2"></i>全站情绪类型分布图</h6>
+        <div id="emotionPieChart" style="height: 350px;"></div>
+    </div></div>
+    <div class="col-md-7"><div class="dashboard-card">
+        <h6 class="fw-bold mb-3"><i class="fas fa-bolt text-warning me-2"></i>最新动态</h6>
+        <p class="text-muted small">系统运行平稳，端云协同引擎工作中。</p>
+    </div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script id="emotion-data" type="application/json">{{ emotion_data | tojson | safe }}</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dataText = document.getElementById('emotion-data').textContent;
+        const rawData = dataText ? JSON.parse(dataText) : [];
+        const chartData = rawData.map(item => ({ name: item.emotion_type, value: item.value }));
+        const pieChart = echarts.init(document.getElementById('emotionPieChart'));
+        pieChart.setOption({
+            tooltip: { trigger: 'item' }, legend: { bottom: '0%' },
+            series: [{ type: 'pie', radius: ['40%', '70%'], itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 }, data: chartData.length ? chartData : [{name:'暂无', value:0}] }]
+        });
+        window.addEventListener('resize', () => pieChart.resize());
+    });
+</script>
+{% endblock %}

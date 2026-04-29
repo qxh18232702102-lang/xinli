@@ -1,0 +1,21 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="dashboard-card">
+    <div class="d-flex justify-content-between mb-4">
+        <h5 class="fw-bold m-0"><i class="fas fa-users text-primary me-2"></i>用户管理列表</h5>
+        <button class="btn btn-sm btn-primary">添加虚拟用户</button>
+    </div>
+    <table class="table table-custom table-hover">
+        <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>注册状态</th><th>操作</th></tr></thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.id }}</td><td class="fw-bold">{{ u.username }}</td><td>{{ u.email or '未绑定' }}</td>
+                <td><span class="badge bg-success">正常</span></td>
+                <td><button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;">封禁</button></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

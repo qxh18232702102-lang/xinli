@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情绪智能分析系统 - Ultimate</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #6c5ce7;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        body { background: var(--bg-gradient); font-family: 'Noto Sans SC', sans-serif; min-height: 100vh; padding-bottom: 50px; }
+        .navbar { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .main-card { background: white; border-radius: 20px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+        .nav-pills .nav-link.active { background-color: var(--primary-color); }
+        .btn-primary-custom { background: linear-gradient(45deg, #6c5ce7, #a29bfe); color: white; border: none; }
+        .camera-box { background: #f8f9fa; border-radius: 15px; overflow: hidden; height: 350px; position: relative; display: flex; align-items: center; justify-content: center; border: 2px dashed #ddd; }
+        video, canvas { width: 100%; height: 100%; object-fit: cover; }
+        .result-section { display: none; animation: slideUp 0.5s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .emotion-badge { font-size: 2.5rem; font-weight: bold; }
+        .ai-chat-bubble { background: #f0f3ff; border-left: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; color: #444; margin: 20px 0; position: relative; }
+        .recommend-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 15px; height: 100%; transition: all 0.3s; }
+        .recommend-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        #chart-container { height: 300px; width: 100%; }
+        
+        .model-details { font-size: 0.85rem; color: #999; margin-top: 5px; background: #f8f9fa; display: inline-block; padding: 2px 10px; border-radius: 20px; }
+        .btn-refresh-icon { cursor: pointer; color: var(--primary-color); transition: transform 0.3s; }
+        .ai-special-card { border: 2px solid #a29bfe; background: #fdfdff; }
+        .ai-tag { background: #6c5ce7; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 5px; }
+
+        .mic-btn { position: absolute; bottom: 15px; right: 15px; width: 50px; height: 50px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4); z-index: 10; }
+        .mic-btn:hover { transform: scale(1.1); }
+        .mic-active { animation: pulse 1.5s infinite; background: #ff7675; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 118, 117, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 118, 117, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 118, 117, 0); } }
+        
+        .speak-btn { cursor: pointer; color: #6c5ce7; font-size: 1.2rem; margin-left: 10px; transition: color 0.2s; }
+        .speak-btn:hover { color: #5b4cc4; }
+        .speak-active { color: #ff7675; animation: wave 1s infinite; }
+        @keyframes wave { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        .crisis-modal-content {
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        .crisis-icon {
+            font-size: 4rem;
+            color: #ff9800;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        
+        .hotline-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 25px;
+            border: 2px dashed #ff9800;
+        }
+        
+        .mom-contact {
+            border-top: 1px solid rgba(0,0,0,0.1);
+            margin-top: 15px;
+            padding-top: 15px;
+        }
+
+        /* 🔥 新增：治疗模式特效 */
+        .therapy-mode-bg { animation: pulse-bg 3s infinite; border: 2px solid #fdcb6e; transition: all 0.5s; }
+        @keyframes pulse-bg { 
+            0% { box-shadow: 0 0 0 0 rgba(253, 203, 110, 0.4); } 
+            70% { box-shadow: 0 0 0 10px rgba(253, 203, 110, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(253, 203, 110, 0); } 
+        }
+                /* ============ 聊天窗口样式 (新增) ============ */
+        /* 1. 改造结果卡片容器 */
+        #result-box {
+            display: none; /* 初始隐藏，由 JS 控制显示 */
+            flex-direction: column;
+            height: 650px; /* 🔥 固定高度，必须有 */
+            padding: 0 !important; /* 去掉原有内边距，为了让输入框贴边 */
+            overflow: hidden;
+        }
+
+        /* 2. 头部固定区 */
+        .chat-header {
+            flex-shrink: 0;
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fff;
+        }
+
+        /* 3. 中间内容滚动区 */
+        .chat-scroll-area {
+            flex: 1; /* 自动撑满剩余空间 */
+            overflow-y: auto; /* 内容多了显示滚动条 */
+            padding: 20px;
+            background-color: #fdfdfd;
+        }
+
+        /* 4. 底部输入区 */
+        .chat-input-area {
+            flex-shrink: 0;
+            height: 70px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 10px;
+            /* 🔥 新增：防止被遮挡 */
+            z-index: 10; 
+            position: relative; 
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            height: 40px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            padding: 0 15px;
+            outline: none;
+            background: #f9f9f9;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #6c5ce7;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+        }
+
+        .chat-input-area button {
+            width: 70px;
+            height: 40px;
+            border-radius: 20px;
+            border: none;
+            background: #6c5ce7;
+            color: white;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .chat-input-area button:hover {
+            background: #5b4cc4;
+            transform: translateY(-2px);
+        }
+
+        /* 用户气泡样式 */
+        .user-message {
+            text-align: right;
+            margin: 15px 0;
+        }
+        .user-message .bubble {
+            background: #6c5ce7;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 15px 15px 0 15px;
+            display: inline-block;
+            text-align: left;
+            max-width: 80%;
+            box-shadow: 0 2px 5px rgba(108, 92, 231, 0.2);
+        }
+        /* ============ 上传框美化样式 (新增) ============ */
+        .upload-box {
+            border: 2px dashed #a29bfe; /* 紫色虚线边框 */
+            border-radius: 15px;
+            background: #fdfdff;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: block;
+            margin-top: 10px;
+        }
+
+        .upload-box:hover {
+            background: #f0f3ff;
+            border-color: #6c5ce7;
+            transform: translateY(-2px); /* 鼠标悬停轻微上浮 */
+        }
+
+        /* 选中文件后的绿色样式 */
+        .upload-box.has-file {
+            border-style: solid;
+            background: #eefcf5;
+            border-color: #00b894;
+        }
+        /* ============ 心理工具箱样式 (新增) ============ */
+        .toolbox-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: #f0f2f5;
+            color: #666;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+        .toolbox-btn:hover { background: #dfe4ea; color: #6c5ce7; transform: rotate(90deg); }
+        
+        /* 弹出的菜单容器 */
+        .toolbox-menu {
+            position: absolute;
+            bottom: 80px; /* 在输入框上方 */
+            left: 20px;
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            padding: 15px;
+            display: none; /* 默认隐藏 */
+            z-index: 100;
+            border: 1px solid #fff;
+            animation: slideUpFade 0.3s ease;
+        }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 菜单项 */
+        .tool-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .tool-item:hover { background: #f8f9fa; transform: translateX(5px); }
+        .tool-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 12px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-brain text-primary me-2 fs-4"></i>
+                <span class="fw-bold text-dark">情绪智能分析系统 
+                    <span class="badge bg-primary ms-2" style="font-size:0.6em;">Voice + Cloud + Edge</span>
+                </span>
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <button onclick="downloadReport()" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-3">
+                    <i class="fas fa-file-pdf me-1"></i>生成今日报告
+                </button>
+
+                <span class="me-3 text-secondary small">
+                    <i class="fas fa-user-circle me-1"></i>你好, <strong>{{ current_user.username }}</strong>
+                </span>
+                <a href="/logout" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                    <i class="fas fa-sign-out-alt me-1"></i>退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 100px;">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="main-card p-4 h-100 position-relative">
+                    <h5 class="mb-4 fw-bold"><i class="fas fa-keyboard me-2 text-primary"></i>开始分析</h5>
+                    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+                        <li class="nav-item w-50" role="presentation"><button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#pills-text">📝 文字/语音</button></li>
+                        <li class="nav-item w-50" role="presentation"><button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#pills-image">📸 人脸模式</button></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="pills-text">
+                            <div class="position-relative">
+                                <textarea class="form-control mb-3" id="text-input" rows="8" placeholder="点击右下角麦克风说话，或者直接输入..."></textarea>
+                                <div class="mic-btn" id="mic-btn" onclick="toggleSpeechRecognition()" title="点击说话">
+                                    <i class="fas fa-microphone"></i>
+                                </div>
+                            </div>
+                            <button onclick="analyzeText()" class="btn btn-primary-custom w-100 py-2 fw-bold">立即分析</button>
+                        </div>
+
+                        <div class="tab-pane fade" id="pills-image">
+                            <div class="camera-box mb-3" id="camera-container">
+                                <div id="camera-placeholder" class="text-center text-muted">
+                                    <i class="fas fa-camera fa-3x mb-3"></i><p>摄像头未开启</p>
+                                </div>
+                                <video id="video" autoplay playsinline style="display:none"></video>
+                                <canvas id="canvas" style="display:none"></canvas>
+                                <img id="preview-img" style="display:none; width:100%; height:100%; object-fit:contain;">
+                            </div>
+                            
+                            <div class="row g-2">
+                                <div class="col-6"><button onclick="tartCamera()" class="btn btn-outline-dark w-100">🔌 开启相机</button></div>
+                                <div class="col-6"><button onclick="takePhoto()" class="btn btn-danger w-100 text-white">📸 拍照分析</button></div>
+                            </div>
+                            <div class="text-center my-3 text-muted small">- 或 -</div>
+
+                            <div class="upload-container">
+                                <input type="file" id="file-upload" accept="image/*" onchange="handleFileSelect(this)" hidden>
+                                
+                                <label for="file-upload" class="upload-box" id="upload-label">
+                                    <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-primary"></i>
+                                    <span class="d-block text-dark fw-bold">点击上传图片</span>
+                                    <span class="d-block small text-muted mt-1">支持：房树人画作 / 自拍 / 表情图</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="main-card mb-4 result-section" id="result-box">
+                    
+                    <div class="chat-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold text-success m-0" id="status-title">
+                                <i class="fas fa-check-circle me-2"></i>分析完成
+                            </h5>
+                            <span class="badge bg-light text-dark border" id="result-time">刚刚</span>
+                        </div>
+                    </div>
+
+                    <div class="chat-scroll-area" id="chatContainer">
+                        
+                        <div class="ai-result-content">
+                            <div class="text-center py-2">
+                                <div class="emotion-badge" id="emotion-display">--</div>
+                                <div id="model-details-box" class="model-details" style="display:none;"></div>
+                            </div>
+
+                            <div class="ai-chat-bubble d-flex align-items-start">
+                                <i class="fas fa-robot me-3 text-primary mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <span id="ai-reply">...</span>
+                                </div>
+                                <i class="fas fa-volume-up speak-btn" onclick="speakReply()" title="朗读回复"></i>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                                <h6 class="fw-bold m-0"><i class="fas fa-gift me-2 text-danger"></i>个性化方案</h6>
+                                <i class="fas fa-sync-alt btn-refresh-icon" onclick="refreshRecommendations()" title="换一换"></i>
+                            </div>
+                            
+                            <div class="row g-3" id="recommendation-list"></div>
+                        </div>
+
+                        </div>
+
+<div class="toolbox-menu" id="toolboxMenu">
+                        <div class="text-muted small fw-bold mb-2 ps-2">✨ 心理探索工具箱</div>
+                        
+                        <div class="tool-item" onclick="triggerTool('oh_card')">
+                            <div class="tool-icon bg-light text-primary"><i class="fas fa-images"></i></div>
+                            <div>
+                                <div class="fw-bold">🔮 OH 卡牌联想</div>
+                                <div class="small text-muted" style="font-size:0.75rem">潜意识图像投射</div>
+                            </div>
+                        </div>
+
+                        <div class="tool-item" onclick="triggerTool('dream')">
+                            <div class="tool-icon bg-light text-warning"><i class="fas fa-moon"></i></div>
+                            <div>
+                                <div class="fw-bold">🛌 梦境解析馆</div>
+                                <div class="small text-muted" style="font-size:0.75rem">弗洛伊德式解梦</div>
+                            </div>
+                        </div>
+
+                        <div class="tool-item" onclick="triggerTool('htp')">
+                            <div class="tool-icon bg-light text-success"><i class="fas fa-tree"></i></div>
+                            <div>
+                                <div class="fw-bold">🎨 房树人绘画</div>
+                                <div class="small text-muted" style="font-size:0.75rem">经典投射测验</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-area">
+                        <button class="toolbox-btn" onclick="toggleToolbox()" title="打开工具箱">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        
+                        <input type="text" id="chatInput" placeholder="想聊聊你的感受吗？在这里输入..." autocomplete="off">
+                        <button onclick="sendChatMessage()">发送</button>
+                    </div>
+
+                </div>
+
+                <div class="main-card p-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-chart-line me-2 text-info"></i>心情趋势</h5>
+                    <div id="chart-container"></div>
+                </div>
+
+            </div>
+
+            <div class="row g-4 mt-1">
+                <div class="col-lg-8">
+                    <div class="main-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold"><i class="fas fa-calendar-alt me-2 text-warning"></i>心情足迹</h5>
+                            <small class="text-muted">记录你每一天的情感主色调</small>
+                        </div>
+                        <div id="calendar-container" style="height: 250px; width: 100%;"></div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="main-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold"><i class="fas fa-cloud me-2 text-info"></i>心情词云</h5>
+                            <small class="text-muted">你的高频词汇</small>
+                        </div>
+                        <div id="wordcloud-container" style="height: 250px; width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal fade" id="crisisModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content crisis-modal-content">
+                <div class="modal-body text-center p-5">
+                    <div class="crisis-icon mb-4">
+                        <i class="fas fa-hands-holding-heart"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-3">我们在这里陪着你</h3>
+                    <p class="text-muted mb-4" id="crisis-text" style="font-size: 1.1rem; line-height: 1.6;">...</p>
+                    
+                    <div class="hotline-box">
+                        <div class="mb-3">
+                            <p class="mb-1 small fw-bold text-uppercase text-secondary">24小时心理援助热线</p>
+                            <h4 class="fw-bold text-dark m-0">400-161-9995</h4>
+                        </div>
+                        <div class="mom-contact">
+                            <p class="mb-1 small fw-bold text-uppercase text-danger">
+                                <i class="fas fa-heart me-1"></i>紧急联系人 (妈妈)
+                            </p>
+                            <h4 class="fw-bold text-dark m-0">138-0000-0000</h4>
+                            <div class="mt-2">
+                                <a href="tel:13800000000" class="btn btn-sm btn-success rounded-pill px-3">
+                                    <i class="fas fa-phone-alt me-1"></i>一键呼叫
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-4" onclick="stopCrisisMode()">
+                            我知道了，谢谢
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        let videoStream = null;
+        let chartInstance = null;
+        let calendarChart = null; 
+        let wordCloudChart = null;
+        let currentEmotion = "";
+        let recognition = null;
+        let isListening = false;
+        let synth = window.speechSynthesis;
+        let crisisModal = null;
+        
+        // 🔥 新增：全局变量，用于记录当前上传模式 (普通人脸 or 房树人)
+        let currentUploadType = 'face'; 
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            updateChart();
+            initCalendar();
+            initWordCloud();
+            initSpeech();
+            crisisModal = new bootstrap.Modal(document.getElementById('crisisModal'));
+        });
+        // ================= 重置界面状态 (新增) =================
+        function resetUI() {
+            // 1. 重置上传框样式 (变回紫色的虚线框)
+            const label = document.getElementById('upload-label');
+            const fileInput = document.getElementById('file-upload');
+            
+            if (label) {
+                label.classList.remove('has-file');
+                // 恢复原始的 HTML 内容
+                label.innerHTML = `
+                    <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-primary"></i>
+                    <span class="d-block text-dark fw-bold">点击上传图片</span>
+                    <span class="d-block small text-muted mt-1">支持：房树人画作 / 自拍 / 表情图</span>
+                `;
+            }
+            if (fileInput) fileInput.value = ''; // 清空文件选择
+
+            // 2. 清理之前的聊天记录 (只保留最顶部的 AI 初始分析结果)
+            // 我们要删除掉所有后来追加的 .user-message 和 .ai-chat-bubble(后续对话)
+            const container = document.getElementById('chatContainer');
+            
+            // 获取所有后续添加的对话气泡 (注意：不要删除 .ai-result-content，那是结果容器)
+            // 逻辑：删除 chatContainer 下面所有的 .user-message 和 
+            // 那些不是初始结果的 .ai-chat-bubble (通常追加的都在 .ai-result-content 后面)
+            
+            // 简单粗暴有效的方法：只保留第一个子元素 (.ai-result-content)
+            // 或者使用特定的类名选择器删除
+            const oldMessages = container.querySelectorAll('.user-message, .ai-chat-bubble.mt-3, .ai-chat-bubble.mt-4');
+            oldMessages.forEach(msg => msg.remove());
+            
+            // 3. 确保推荐列表也是干净的 (虽然 renderResult 会覆盖，但清空更保险)
+            document.getElementById('recommendation-list').innerHTML = '';
+        }
+
+        // ================= 核心分析逻辑 (已融合治疗师功能) =================
+        async function analyzeText() {
+            const text = document.getElementById('text-input').value.trim();
+            if (!text) return Swal.fire('提示', '写点什么吧~', 'info');
+            resetUI();
+            showLoading();
+            try {
+                const res = await fetch('/analyze/text', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                if (res.status === 401 || res.redirected) { window.location.href = '/login'; return; }
+                const data = await res.json();
+                renderResult(data);
+            } catch (e) { Swal.fire('错误', '服务连接失败', 'error'); }
+        }
+
+        // ================= 渲染结果 (🔥 核心修改点) =================
+        function renderResult(data) {
+            Swal.close();
+
+            // 1. 危机干预拦截 (最高优先级)
+            if (data.is_crisis) {
+                document.getElementById('crisis-text').innerText = data.ai_reply;
+                crisisModal.show();
+                if (synth.speaking) synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(data.ai_reply);
+                utterance.lang = 'zh-CN'; utterance.rate = 0.9; synth.speak(utterance);
+                return; 
+            }
+
+            const resultBox = document.getElementById('result-box');
+            resultBox.style.display = 'flex';
+            resultBox.classList.remove('therapy-mode-bg'); // 先移除治疗特效，防止残留
+
+            // 填充基础信息
+            currentEmotion = data.emotion;
+            const emoBadge = document.getElementById('emotion-display');
+            emoBadge.textContent = data.emotion;
+            const colors = { '高兴': '#00b894', '愤怒': '#d63031', '难过': '#636e72', '恐惧': '#2d3436', '中性': '#0984e3', '惊讶': '#e17055', '潜意识探索': '#fdcb6e', '潜意识整合': '#fdcb6e' };
+            emoBadge.style.color = colors[data.emotion] || '#0984e3';
+
+            // 显示 Layer 3 信息 (如果有)
+            const detailBox = document.getElementById('model-details-box');
+            let detailHtml = "";
+            if (data.direction && data.fine) {
+                detailHtml = `Layer1: 极性 | Layer2: 本地BERT`;
+                if (data.cloud_analysis) {
+                    const cloudEmo = data.cloud_analysis.emotion;
+                    const matchIcon = (cloudEmo === data.emotion) ? "✅" : "🤔";
+                    detailHtml += ` | Layer3: 云端 (${cloudEmo} ${matchIcon})`;
+                }
+                detailBox.style.display = 'inline-block';
+                detailBox.innerHTML = detailHtml;
+            } else { detailBox.style.display = 'none'; }
+
+            document.getElementById('ai-reply').textContent = data.ai_reply;
+
+            // 2. 🔥🔥🔥 判断是否进入【心理治疗模式】 🔥🔥🔥
+            if (data.is_therapy_mode) {
+                // 开启金色呼吸灯特效
+                resultBox.classList.add('therapy-mode-bg');
+                document.getElementById('status-title').innerHTML = '<i class="fas fa-user-md me-2 text-warning"></i>深度咨询中';
+                
+                // 语音播报
+                //speakReply();
+
+                // 延迟 1.5秒 后，根据工具类型弹出互动窗口
+                setTimeout(() => {
+                    // 工具 A: 房树人 (HTP)
+                    if (data.tool_type === 'htp_drawing') {
+                        Swal.fire({
+                            title: '🎨 房树人绘画测验',
+                            html: `
+                                <p class="text-start small text-muted">咨询师发现你有一些难以言说的情绪。请拿出一张白纸，画出<b>一座房子、一棵树和一个人</b>。</p>
+                                <p class="text-start small text-muted">画完后，请拍照并点击下方按钮上传，AI 将为你解读潜意识。</p>
+                                <img src="https://cdn-icons-png.flaticon.com/512/2983/2983067.png" width="60" class="my-2 opacity-75">
+                            `,
+                            showCancelButton: true,
+                            confirmButtonText: '📸 我画好了，上传图片',
+                            cancelButtonText: '稍后再说',
+                            confirmButtonColor: '#6c5ce7'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // 1. 标记当前上传类型为 htp
+                                currentUploadType = 'htp';
+                                // 2. 自动切换到图片上传 Tab
+                                document.querySelector('[data-bs-target="#pills-image"]').click();
+                            }
+                        });
+                    }
+                    
+                    // 工具 B: 完形填空
+                    if (data.tool_type === 'sentence_completion') {
+                        Swal.fire({
+                            title: '📝 潜意识探索',
+                            input: 'text',
+                            inputLabel: '请凭直觉补全这句话（不要思考）：',
+                            inputPlaceholder: '其实我真正害怕的是...',
+                            inputValue: '其实我真正害怕的是',
+                            showCancelButton: true,
+                            confirmButtonText: '提交分析',
+                            confirmButtonColor: '#0984e3'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire('已收到', '咨询师正在分析你的潜意识...', 'success');
+                                document.getElementById('text-input').value = result.value; 
+                            }
+                        });
+                    }
+                }, 1500);
+
+            } else {
+                // 普通模式
+                document.getElementById('status-title').innerHTML = '<i class="fas fa-check-circle me-2 text-success"></i>分析完成';
+                // 确保下次上传是普通人脸模式
+                currentUploadType = 'face'; 
+            }
+
+            // 3. 处理推荐内容 (兼容 AI 推荐和普通推荐)
+            let recList = data.recommendations || [];
+            // 如果有云端分析（Layer 3 或 治疗建议），优先显示
+            if (data.cloud_analysis && data.cloud_analysis.rec_content) {
+                recList.unshift({
+                    category: data.cloud_analysis.rec_category + (data.is_therapy_mode ? " (咨询师)" : " (AI)"),
+                    content: data.cloud_analysis.rec_content,
+                    reason: data.cloud_analysis.rec_reason,
+                    is_special: true
+                });
+            }
+            renderRecList(recList);
+
+            // 4. 刷新图表
+            updateChart();
+            initCalendar();
+            initWordCloud();
+        }
+
+        // ================= 其他辅助功能 (全部保留原样) =================
+
+        function renderRecList(list) {
+            const listDiv = document.getElementById('recommendation-list');
+            listDiv.innerHTML = '';
+            list.forEach(item => {
+                const cardClass = item.is_special ? 'recommend-card ai-special-card' : 'recommend-card';
+                const tagHtml = item.is_special ? '<span class="ai-tag">✨ AI 精选</span>' : '';
+                listDiv.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="${cardClass}">
+                            <div class="text-primary fw-bold small">${tagHtml}【${item.category}】</div>
+                            <div class="fw-bold my-2 text-dark">${item.content}</div>
+                            <div class="text-muted small">💡 ${item.reason || '推荐'}</div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function initWordCloud() {
+            const dom = document.getElementById('wordcloud-container');
+            if(!dom) return;
+            wordCloudChart = echarts.init(dom);
+            fetch('/get/wordcloud').then(res => res.json()).then(resData => {
+                if (!resData.data || resData.data.length === 0) {
+                    wordCloudChart.setOption({ title: { text: '暂无数据', left: 'center', top: 'center', textStyle: { color: '#999' } } });
+                    return;
+                }
+                const option = {
+                    tooltip: { show: true },
+                    series: [{
+                        type: 'wordCloud', shape: 'circle',
+                        left: 'center', top: 'center', width: '95%', height: '95%',
+                        sizeRange: [12, 50], rotationRange: [-45, 90],
+                        textStyle: { fontFamily: 'sans-serif', fontWeight: 'bold', color: function () { return 'rgb(' + [Math.round(Math.random() * 160), Math.round(Math.random() * 160), Math.round(Math.random() * 160)].join(',') + ')'; } },
+                        data: resData.data
+                    }]
+                };
+                wordCloudChart.setOption(option);
+            });
+        }
+
+        function initCalendar() {
+            const dom = document.getElementById('calendar-container');
+            calendarChart = echarts.init(dom);
+            const currentYear = new Date().getFullYear();
+            fetch('/get/calendar_data').then(res => res.json()).then(resData => {
+                const option = {
+                    tooltip: { formatter: function (params) { const val = params.value[1]; const map = {2:'😄', 1:'😲', 0:'😐', '-1':'😔', '-2':'😡'}; return params.value[0] + ': ' + (map[val]||''); } },
+                    visualMap: { min: -2, max: 2, calculable: true, orient: 'horizontal', left: 'center', top: 0, inRange: { color: ['#d63031', '#fdcb6e', '#dfe6e9', '#00b894', '#0984e3'] } },
+                    calendar: { top: 60, left: 30, right: 30, cellSize: ['auto', 20], range: currentYear, dayLabel: { nameMap: 'cn' }, monthLabel: { nameMap: 'cn' } },
+                    series: { type: 'heatmap', coordinateSystem: 'calendar', data: resData.data }
+                };
+                calendarChart.setOption(option);
+            });
+        }
+
+        function stopCrisisMode() { if (synth.speaking) { synth.cancel(); } crisisModal.hide(); }
+
+        function downloadReport() {
+            Swal.fire({
+                title: '生成报告中...', didOpen: () => {
+                    Swal.showLoading();
+                    fetch('/report/download').then(res => {
+                        if (res.status === 200) return res.blob(); else throw new Error('No data');
+                    }).then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = `Report_${new Date().toISOString().slice(0,10)}.pdf`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                        Swal.fire('成功', '已下载', 'success');
+                    }).catch(err => Swal.fire('提示', '请先进行几次分析', 'warning'));
+                }
+            });
+        }
+
+        function initSpeech() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false; recognition.lang = 'zh-CN';
+                recognition.onstart = () => { isListening = true; document.getElementById('mic-btn').classList.add('mic-active'); Swal.fire({ title: '正在聆听...', toast: true, position: 'top-end', showConfirmButton: false }); };
+                recognition.onend = () => { isListening = false; document.getElementById('mic-btn').classList.remove('mic-active'); };
+                recognition.onresult = (event) => { document.getElementById('text-input').value = event.results[0][0].transcript; };
+            } else { document.getElementById('mic-btn').style.display = 'none'; }
+        }
+
+        function toggleSpeechRecognition() { if (!recognition) return; if (isListening) recognition.stop(); else recognition.start(); }
+
+        function speakReply() {
+            const text = document.getElementById('ai-reply').innerText;
+            if (!text || text === '...') return;
+            if (synth.speaking) { synth.cancel(); document.querySelector('.speak-btn').classList.remove('speak-active'); return; }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.onstart = () => document.querySelector('.speak-btn').classList.add('speak-active');
+            utterance.onend = () => document.querySelector('.speak-btn').classList.remove('speak-active');
+            synth.speak(utterance);
+        }
+
+        async function startCamera() {
+            const video = document.getElementById('video');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = videoStream; video.style.display = 'block';
+                document.getElementById('camera-placeholder').style.display = 'none'; document.getElementById('preview-img').style.display = 'none';
+            } catch (err) { Swal.fire('错误', '无法打开摄像头', 'error'); }
+        }
+
+        async function takePhoto() {
+            if (!videoStream) return Swal.fire('提示', '请先开启相机', 'warning');
+            const video = document.getElementById('video'); const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(async (blob) => {
+                const url = URL.createObjectURL(blob);
+                const preview = document.getElementById('preview-img');
+                preview.src = url; preview.style.display = 'block'; video.style.display = 'none';
+                const formData = new FormData(); formData.append('file', blob, 'capture.jpg');
+                
+                // 🔥 附加当前模式标记
+                formData.append('img_type', currentUploadType);
+
+                showLoading();
+                try {
+                    const res = await fetch('/analyze/image', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    
+                    // 分析完后重置为普通模式
+                    currentUploadType = 'face';
+                    renderResult(data);
+                } catch (e) { Swal.fire('错误', '分析失败', 'error'); }
+            }, 'image/jpeg');
+        }
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('file-upload');
+            if (fileInput.files.length === 0) return;
+            const formData = new FormData(); formData.append('file', fileInput.files[0]);
+            
+            // 🔥🔥🔥 核心修改：告诉后端这到底是一张人脸，还是一张画 🔥🔥🔥
+            formData.append('img_type', currentUploadType);
+
+            showLoading();
+            try {
+                const res = await fetch('/analyze/image', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                // 分析完后重置为普通模式，防止下次误判
+                currentUploadType = 'face';
+                renderResult(data);
+            } catch (e) { Swal.fire('错误', '分析失败', 'error'); }
+        }
+
+        function refreshRecommendations() {
+            if (!currentEmotion) return;
+            document.querySelector('.btn-refresh-icon').style.transform = 'rotate(180deg)';
+            fetch('/get/refresh_recommend', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ emotion: currentEmotion })
+            })
+            .then(res => res.json())
+            .then(data => {
+                renderRecList(data.recommendations);
+                setTimeout(() => { document.querySelector('.btn-refresh-icon').style.transform = 'rotate(0deg)'; }, 300);
+            });
+        }
+
+        function initChart() {
+            chartInstance = echarts.init(document.getElementById('chart-container'));
+            chartInstance.setOption({
+                grid: { top: 30, bottom: 30, left: 40, right: 20 }, tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: [] },
+                yAxis: { type: 'value', min: -2, max: 2, splitLine: { show: true, lineStyle: { type: 'dashed' } }, axisLabel: { formatter: function (val) { if(val==2) return '😊'; if(val==0) return '😐'; if(val==-2) return '😡'; return ''; }, fontSize: 16 } },
+                series: [{ type: 'line', smooth: true, data: [], lineStyle: { color: '#6c5ce7', width: 3 }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: 'rgba(108, 92, 231, 0.3)'}, {offset: 1, color: 'rgba(108, 92, 231, 0)'}]) } }]
+            });
+        }
+
+        async function updateChart() {
+            try {
+                const res = await fetch('/get/history');
+                const data = await res.json();
+                chartInstance.setOption({ xAxis: { data: data.dates }, series: [{ data: data.scores }] });
+            } catch (e) { console.error(e); }
+        }
+
+        function showLoading() { Swal.fire({ title: '深度思考中...', didOpen: () => Swal.showLoading() }); }
+        window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); if(calendarChart) calendarChart.resize(); if(wordCloudChart) wordCloudChart.resize(); });
+            // ================= 聊天交互功能 (新增) =================
+
+// ================= 真正能对话的发送函数 =================
+    async function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        const container = document.getElementById('chatContainer');
+
+        if (!text) return;
+
+        // 1. 界面上先把你的话说出来
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user-message';
+        userDiv.innerHTML = `<div class="bubble">${text}</div>`;
+        container.appendChild(userDiv);
+        
+        // 清空输入框并滚动到底部
+        input.value = '';
+        container.scrollTop = container.scrollHeight;
+
+        // 2. 🔥🔥🔥 关键：真正发给后端 Flask 🔥🔥🔥
+        try {
+            // 显示一个简单的“对方正在输入...”提示 (可选)
+            // const loadingDiv = document.createElement('div');
+            // loadingDiv.innerHTML = '<small class="text-muted ms-5">AI 思考中...</small>';
+            // container.appendChild(loadingDiv);
+
+            const res = await fetch('/analyze/text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }) // 把你的回复发过去
+            });
+
+            const data = await res.json();
+
+            // 3. 收到后端回复，创建 AI 的气泡
+            // (移除 loadingDiv 如果你加了的话)
+            
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'ai-chat-bubble d-flex align-items-start mt-3'; // 加上样式
+            // 复用你现有的 AI 气泡 HTML 结构
+            aiDiv.innerHTML = `
+                <i class="fas fa-robot me-3 text-primary mt-1"></i>
+                <div class="flex-grow-1">
+                    <span>${data.ai_reply}</span>
+                </div>
+            `;
+            
+            container.appendChild(aiDiv);
+            
+            // 再次滚动到底部
+            container.scrollTop = container.scrollHeight;
+
+        } catch (e) {
+            console.error("对话失败:", e);
+            Swal.fire('错误', 'AI 掉线了，请重试', 'error');
+        }
+    }
+
+        // 支持回车键发送
+        document.getElementById('chatInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+
+        // 🔥 修改原有的 renderResult 函数最后一行
+        // 找到 function renderResult(data) {...} 
+        // 请确保在该函数的大括号结束前，添加这一行代码，让每次分析完自动滚到最上面看结果
+        // document.getElementById('chatContainer').scrollTop = 0;
+        // ============ 文件选择美化处理函数 (新增) ============
+    function handleFileSelect(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const label = document.getElementById('upload-label');
+            
+            // 1. 改变界面，变成绿色实线，显示文件名
+            label.classList.add('has-file');
+            label.innerHTML = `
+                <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                <span class="d-block text-dark fw-bold">${file.name}</span>
+                <span class="d-block small text-success mt-1">已准备好，正在分析...</span>
+            `;
+
+            // 2. 自动触发原来的上传逻辑
+            uploadImage(); 
+        }
+    }
+    // ================= 心理工具箱功能 (新增) =================
+
+    // 1. 切换菜单显示/隐藏
+    function toggleToolbox() {
+        const menu = document.getElementById('toolboxMenu');
+        if (menu.style.display === 'block') {
+            menu.style.display = 'none';
+        } else {
+            menu.style.display = 'block';
+        }
+    }
+
+    // 点击页面其他地方关闭菜单
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('toolboxMenu');
+        const btn = document.querySelector('.toolbox-btn');
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
+
+    // 2. 触发工具逻辑
+    function triggerTool(type) {
+        toggleToolbox(); // 选完先关菜单
+        
+        const container = document.getElementById('chatContainer');
+        
+        // === 工具 A: OH 卡牌 (模拟随机抽卡) ===
+        if (type === 'oh_card') {
+            // 随机种子，保证每次图不一样
+            const randomSeed = Math.floor(Math.random() * 1000);
+            const imageUrl = `https://picsum.photos/400/300?random=${randomSeed}&blur=2`; // 使用 picsum 生成抽象模糊图
+            
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'ai-chat-bubble d-flex align-items-start mt-4';
+            aiDiv.innerHTML = `
+                <i class="fas fa-magic me-3 text-primary mt-1"></i>
+                <div class="flex-grow-1">
+                    <p>我为你抽出了一张「潜意识卡牌」。请看着这张图，不要思考，<b>你第一眼看到了什么？它让你想起了什么？</b></p>
+                    <div class="text-center my-3">
+                        <img src="${imageUrl}" class="img-fluid rounded shadow-sm" style="max-height: 200px;">
+                    </div>
+                    <p class="small text-muted">告诉我你的联想，我来帮你解读潜意识。</p>
+                </div>
+            `;
+            container.appendChild(aiDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // === 工具 B: 梦境解析 ===
+        else if (type === 'dream') {
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'ai-chat-bubble d-flex align-items-start mt-4';
+            aiDiv.innerHTML = `
+                <i class="fas fa-moon me-3 text-warning mt-1"></i>
+                <div class="flex-grow-1">
+                    <p class="fw-bold">欢迎来到梦境解析馆 🌙</p>
+                    <p>梦是通往潜意识的皇家大道。请告诉我你昨晚做了什么梦？越详细越好（包括颜色、情绪、人物）。</p>
+                </div>
+            `;
+            container.appendChild(aiDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            // 自动聚焦输入框
+            const input = document.getElementById('chatInput');
+            input.placeholder = "我梦见...";
+            input.focus();
+        }
+
+        // === 工具 C: 房树人 ===
+        else if (type === 'htp') {
+            // 直接跳转到上传界面
+            currentUploadType = 'htp'; 
+            document.querySelector('[data-bs-target="#pills-image"]').click(); 
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'info',
+                title: '请上传你的画作或直接拍照', showConfirmButton: false, timer: 3000
+            });
+        }
+    }
+    </script>
+</body>
+</html>

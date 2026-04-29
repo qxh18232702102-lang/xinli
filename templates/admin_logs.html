@@ -1,0 +1,20 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="dashboard-card">
+    <h5 class="fw-bold mb-4"><i class="fas fa-history text-info me-2"></i>全局分析日志 (Top 100)</h5>
+    <table class="table table-custom table-hover">
+        <thead><tr><th>时间</th><th>用户</th><th>检测情绪</th><th>用户输入 (多模态)</th><th>AI 响应 / Agent路由</th></tr></thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td class="small text-muted">{{ log.create_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="fw-bold">{{ log.username }}</td>
+                <td><span class="badge bg-secondary">{{ log.emotion_type }}</span></td>
+                <td style="max-width:200px;" class="text-truncate" title="{{ log.input_content }}">{{ log.input_content }}</td>
+                <td style="max-width:250px;" class="text-truncate text-muted" title="{{ log.healing_text }}">{{ log.healing_text }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

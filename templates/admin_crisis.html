@@ -1,0 +1,22 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="dashboard-card border-top border-danger border-4">
+    <h5 class="fw-bold mb-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>高危情绪与深度干预工单</h5>
+    <table class="table table-custom table-hover">
+        <thead><tr><th>预警时间</th><th>报警用户</th><th>工单类型</th><th>触发内容</th><th>干预状态</th></tr></thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr>
+                <td class="small">{{ alert.create_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="fw-bold">{{ alert.username }}</td>
+                <td><span class="badge bg-danger">{{ alert.emotion_type }}</span></td>
+                <td>{{ alert.input_content }}</td>
+                <td><button class="btn btn-sm btn-danger" style="font-size:0.75rem;">标记已处理</button></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center py-4 text-success"><i class="fas fa-check-circle fa-2x mb-2"></i><br>目前没有未处理的危机预警</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <h5 class="fw-bold mb-4"><i class="fas fa-microchip text-primary me-2"></i>算法引擎调度配置</h5>
+            
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" checked disabled>
+                <label class="form-check-label fw-bold">启用端侧 BERT 本地推理 (Layer 1&2)</label>
+                <div class="small text-muted">目前使用 my_finetuned_model (7分类权重)</div>
+            </div>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" checked disabled>
+                <label class="form-check-label fw-bold">启用云端大模型 Agent 分诊 (Layer 3)</label>
+                <div class="small text-muted">DeepSeek / GLM-4V 多模态接口在线</div>
+            </div>
+            <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" checked disabled>
+                <label class="form-check-label fw-bold text-danger">强制危机熔断机制</label>
+                <div class="small text-muted">检测到高危意图立即阻断LLM并拉起热线</div>
+            </div>
+            <button class="btn btn-primary" disabled>保存配置 (演示环境)</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
