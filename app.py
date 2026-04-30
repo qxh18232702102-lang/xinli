@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for, f
 from flask_cors import CORS
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import pymysql
 import os
 import tempfile
@@ -125,15 +127,53 @@ def save_history(content, emotion, healing):
     finally:
         if conn: conn.close()
 
-def get_recommendation(emotion):
+def get_smart_recommendation(user_text, emotion):
     conn = None
     try:
         conn = pymysql.connect(**mysql_config)
         with conn.cursor() as cursor:
-            sql = "SELECT category, content, reason FROM recommendations WHERE emotion_type = %s ORDER BY RAND() LIMIT 3"
+            # 【阶段 1：粗排召回】取出该情绪下的所有方案，不再使用 LIMIT 和 RAND()
+            sql = "SELECT category, content, reason FROM recommendations WHERE emotion_type = %s"
             cursor.execute(sql, (emotion,))
-            return cursor.fetchall()
-    except: return []
+            candidates = cursor.fetchall()
+            
+        if not candidates:
+            return []
+        if len(candidates) <= 2 or not user_text:
+            # 如果候选太少或用户没输入文字（比如图片模式），直接随机返回
+            import random
+            random.shuffle(candidates)
+            return candidates[:2]
+
+        # 【阶段 2：TF-IDF 语义向量重排】
+        # 1. 对用户输入进行分词
+        user_words = " ".join(jieba.cut(user_text))
+        
+        # 2. 对所有候选方案（内容+理由）进行分词
+        docs = [user_words]
+        for c in candidates:
+            doc_text = f"{c['content']} {c['reason']}"
+            docs.append(" ".join(jieba.cut(doc_text)))
+            
+        # 3. 转化为 TF-IDF 矩阵并计算余弦相似度
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(docs)
+        
+        # 计算用户输入（第0行）与所有候选方案（第1行及以后）的相似度
+        cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+        
+        # 4. 将打分附加到候选列表中，并按分数降序排列
+        for i, c in enumerate(candidates):
+            c['score'] = float(cosine_sim[i])
+            
+        candidates.sort(key=lambda x: x['score'], reverse=True)
+        
+        # 【阶段 3：输出】选取最匹配的 2 个方案
+        return candidates[:2]
+
+    except Exception as e:
+        print(f"❌ 推荐算法出错: {e}")
+        return []
     finally:
         if conn: conn.close()
 
@@ -256,7 +296,7 @@ def api_analyze_text():
         local_result = text_model.analyze(text)
         emotion = local_result['最终情绪']
         reply = get_ai_reply(emotion)
-        recommendations = get_recommendation(emotion)
+        recommendations = get_smart_recommendation(text, emotion)
         cloud_data = None
         
         # 4. Layer 3 云端大模型辅助 (DeepSeek)
