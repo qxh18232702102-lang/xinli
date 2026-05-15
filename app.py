@@ -113,6 +113,17 @@ def load_user(user_id):
     finally:
         conn.close()
     return None
+# 👇👇👇 在上面函数的下方，新增下面这段代码 👇👇👇
+@login_manager.request_loader
+def load_user_from_request(request):
+    # 检查请求头中是否带有小程序的专属 "VIP 凭证"
+    api_token = request.headers.get('X-MiniApp-Token')
+    if api_token == 'my_grad_project_secret_token':
+        # 如果凭证对上了，返回一个虚拟的“小程序访客”用户，完美骗过 @login_required
+        return User(id=99999, username='小程序访客', password_hash='none')
+    
+    # 如果没有凭证，且没有网页端 Cookie，就会被拦截
+    return None
 
 # ================= 辅助函数 =================
 HEALING_CORPUS = {
@@ -134,7 +145,10 @@ def map_emotion_to_score(emotion):
     return mapping.get(emotion, 0)
 
 def save_history(content, emotion, healing):
-    if not current_user.is_authenticated: return
+# 👇 核心修改：如果未登录，或者是小程序专属的虚拟访客(id=99999)，则不写入数据库，直接放行
+    if not current_user.is_authenticated or current_user.id == 99999: 
+        return None
+    
     conn = None
     try:
         conn = pymysql.connect(**mysql_config)
